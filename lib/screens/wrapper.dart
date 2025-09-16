@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:moviebook_app/screens/home/home_screen.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import 'auth/login_screen.dart';
-import 'home/home_screen.dart';
+import 'welcome_screen.dart';
 
 class Wrapper extends StatelessWidget {
   const Wrapper({Key? key}) : super(key: key);

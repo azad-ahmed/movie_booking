@@ -4,7 +4,10 @@ import '../../services/auth_service.dart';
 import '../../services/booking_service.dart';
 import '../../models/booking.dart';
 import '../../models/movie.dart';
+import '../../models/cinema.dart';
 import '../../widgets/movie_selection_widget.dart';
+import '../../widgets/cinema_selection_widget.dart';
+import '../../widgets/datetime_selection_widget.dart';
 
 class AddBookingScreen extends StatefulWidget {
   final Booking? bookingToEdit; // NULL = neue Buchung, sonst = bearbeiten
@@ -124,121 +127,36 @@ class _AddBookingScreenState extends State<AddBookingScreen> {
                     
                     SizedBox(height: 16),
                     
-                    // Cinema
+                    // Cinema selection with images and descriptions
                     Card(
                       child: Padding(
                         padding: EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isEditing ? 'Kino ändern' : 'Kino auswählen',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(height: 10),
-                            TextFormField(
-                              controller: _cinemaController,
-                              decoration: InputDecoration(
-                                hintText: 'Kino eingeben oder auswählen',
-                                prefixIcon: Icon(Icons.location_on),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Bitte Kino eingeben';
-                                }
-                                return null;
-                              },
-                            ),
-                            SizedBox(height: 10),
-                            Wrap(
-                              spacing: 8,
-                              children: _popularCinemas.map((cinema) => 
-                                ActionChip(
-                                  label: Text(cinema),
-                                  onPressed: () {
-                                    _cinemaController.text = cinema;
-                                  },
-                                ),
-                              ).toList(),
-                            ),
-                          ],
+                        child: CinemaSelectionWidget(
+                          selectedCinemaName: _cinemaController.text.isEmpty ? null : _cinemaController.text,
+                          onCinemaSelected: (cinema) {
+                            setState(() {
+                              _cinemaController.text = cinema.name;
+                            });
+                          },
                         ),
                       ),
                     ),
                     
                     SizedBox(height: 16),
                     
-                    // Date and time
+                    // Date and time selection with improved UI
                     Card(
                       child: Padding(
                         padding: EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isEditing ? 'Datum und Uhrzeit ändern' : 'Datum und Uhrzeit',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(height: 15),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: InkWell(
-                                    onTap: _selectDate,
-                                    child: Container(
-                                      padding: EdgeInsets.all(15),
-                                      decoration: BoxDecoration(
-                                        border: Border.all(color: Colors.grey),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.calendar_today),
-                                          SizedBox(width: 10),
-                                          Text(
-                                            '${_selectedDate.day}.${_selectedDate.month}.${_selectedDate.year}',
-                                            style: TextStyle(fontSize: 16),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: 10),
-                                Expanded(
-                                  child: InkWell(
-                                    onTap: _selectTime,
-                                    child: Container(
-                                      padding: EdgeInsets.all(15),
-                                      decoration: BoxDecoration(
-                                        border: Border.all(color: Colors.grey),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.access_time),
-                                          SizedBox(width: 10),
-                                          Text(
-                                            '${_selectedTime.hour}:${_selectedTime.minute.toString().padLeft(2, '0')}',
-                                            style: TextStyle(fontSize: 16),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                        child: DateTimeSelectionWidget(
+                          initialDate: _selectedDate,
+                          initialTime: _selectedTime,
+                          onDateTimeChanged: (date, time) {
+                            setState(() {
+                              _selectedDate = date;
+                              _selectedTime = time;
+                            });
+                          },
                         ),
                       ),
                     ),
@@ -342,32 +260,6 @@ class _AddBookingScreenState extends State<AddBookingScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _selectDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(Duration(days: 365)),
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
-  }
-
-  Future<void> _selectTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime,
-    );
-    if (picked != null && picked != _selectedTime) {
-      setState(() {
-        _selectedTime = picked;
-      });
-    }
   }
 
   Future<void> _updateBooking() async {
