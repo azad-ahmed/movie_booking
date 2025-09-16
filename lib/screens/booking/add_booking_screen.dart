@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/booking_service.dart';
 import '../../models/booking.dart';
+import '../../models/movie.dart';
+import '../../widgets/movie_selection_widget.dart';
 
 class AddBookingScreen extends StatefulWidget {
   final Booking? bookingToEdit; // NULL = neue Buchung, sonst = bearbeiten
@@ -27,18 +29,6 @@ class _AddBookingScreenState extends State<AddBookingScreen> {
   bool _isLoading = false;
 
   bool get isEditing => widget.bookingToEdit != null;
-
-  // Predefined options
-  final List<String> _popularMovies = [
-    'Avatar 3',
-    'Spider-Man: Beyond',
-    'The Batman 2',
-    'Fast & Furious 11',
-    'John Wick 5',
-    'Mission Impossible 8',
-    'Top Gun 3',
-    'Guardians of the Galaxy 4'
-  ];
 
   final List<String> _popularCinemas = [
     'CineStar Basel',
@@ -117,50 +107,17 @@ class _AddBookingScreenState extends State<AddBookingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Movie title
+                    // Movie selection with images and descriptions
                     Card(
                       child: Padding(
                         padding: EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isEditing ? 'Film ändern' : 'Film auswählen',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(height: 10),
-                            TextFormField(
-                              controller: _movieController,
-                              decoration: InputDecoration(
-                                hintText: 'Film eingeben oder auswählen',
-                                prefixIcon: Icon(Icons.movie),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Bitte Film eingeben';
-                                }
-                                return null;
-                              },
-                            ),
-                            SizedBox(height: 10),
-                            Wrap(
-                              spacing: 8,
-                              children: _popularMovies.map((movie) => 
-                                ActionChip(
-                                  label: Text(movie),
-                                  onPressed: () {
-                                    _movieController.text = movie;
-                                  },
-                                ),
-                              ).toList(),
-                            ),
-                          ],
+                        child: MovieSelectionWidget(
+                          selectedMovieTitle: _movieController.text.isEmpty ? null : _movieController.text,
+                          onMovieSelected: (movie) {
+                            setState(() {
+                              _movieController.text = movie.title;
+                            });
+                          },
                         ),
                       ),
                     ),
