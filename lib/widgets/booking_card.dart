@@ -1,254 +1,420 @@
 import 'package:flutter/material.dart';
-import '../models/booking.dart';
-import '../services/booking_service.dart';
+import '../services/booking_manager.dart';
+import '../screens/booking_details_screen.dart';
+import '../screens/simple_edit_booking.dart';
 
-class BookingCard extends StatelessWidget {
-  final Booking booking;
-  final VoidCallback onDelete;
+class BookingCard extends StatefulWidget {
+  final String bookingId;
+  final String movieTitle;
+  final String cinema;
+  final String date;
+  final String time;
+  final int seats;
+  final double price;
+  final bool isPast;
+  final Duration animationDelay;
+  final VoidCallback? onBookingDeleted;
 
   const BookingCard({
     Key? key,
-    required this.booking,
-    required this.onDelete,
+    required this.bookingId,
+    required this.movieTitle,
+    required this.cinema,
+    required this.date,
+    required this.time,
+    required this.seats,
+    required this.price,
+    this.isPast = false,
+    this.animationDelay = Duration.zero,
+    this.onBookingDeleted,
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final isPastEvent = booking.showtime.isBefore(now);
+  _BookingCardState createState() => _BookingCardState();
+}
 
-    return Card(
-      margin: EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: isPastEvent
-              ? LinearGradient(
-                  colors: [Colors.grey[100]!, Colors.grey[50]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : LinearGradient(
-                  colors: [Colors.red[50]!, Colors.white],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with movie title and action buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+class _BookingCardState extends State<BookingCard> 
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  
+  final BookingManager _bookingManager = BookingManager();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: Duration(milliseconds: 600),
+      vsync: this,
+    );
+    
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    );
+    
+    _slideAnimation = Tween<Offset>(
+      begin: Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    
+    // Animation mit Verzögerung starten
+    Future.delayed(widget.animationDelay, () {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: Card(
+            elevation: widget.isPast ? 2 : 8,
+            shadowColor: widget.isPast 
+                ? Colors.grey.withOpacity(0.2)
+                : Theme.of(context).primaryColor.withOpacity(0.3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: widget.isPast
+                    ? LinearGradient(
+                        colors: [
+                          Colors.grey.withOpacity(0.1),
+                          Colors.grey.withOpacity(0.05),
+                        ],
+                      )
+                    : LinearGradient(
+                        colors: [
+                          Theme.of(context).primaryColor.withOpacity(0.1),
+                          Colors.blue.withOpacity(0.05),
+                        ],
+                      ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header mit Status
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          booking.movieTitle,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: isPastEvent ? Colors.grey[600] : Colors.black,
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: widget.isPast 
+                                ? Colors.grey.withOpacity(0.2)
+                                : Theme.of(context).primaryColor.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            widget.isPast ? '✓ Vergangen' : '🎬 Aktiv',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: widget.isPast 
+                                  ? Colors.grey[600]
+                                  : Theme.of(context).primaryColor,
+                            ),
                           ),
                         ),
-                        SizedBox(height: 4),
-                        if (isPastEvent)
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[400],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Vergangen',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          )
-                        else
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Bevorstehend',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                        
+                        // Mehr-Optionen Button
+                        IconButton(
+                          icon: Icon(
+                            Icons.more_vert_rounded,
+                            color: Colors.grey[600],
+                            size: 20,
                           ),
+                          onPressed: () => _showOptionsMenu(context),
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(),
+                        ),
                       ],
                     ),
-                  ),
-                  // Action buttons
-                  if (!isPastEvent) ...[
-                    IconButton(
-                      onPressed: () {
-                        _showEditDialog(context);
-                      },
-                      icon: Icon(
-                        Icons.edit,
-                        color: Colors.orange[600],
+                    
+                    SizedBox(height: 12),
+                    
+                    // Film Titel
+                    Text(
+                      widget.movieTitle,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: widget.isPast
+                            ? Theme.of(context).textTheme.titleMedium?.color?.withOpacity(0.7)
+                            : Theme.of(context).textTheme.titleLarge?.color,
                       ),
-                      tooltip: 'Buchung bearbeiten',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    
+                    SizedBox(height: 8),
+                    
+                    // Kino Info
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_rounded,
+                          size: 16,
+                          color: Colors.grey[600],
+                        ),
+                        SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            widget.cinema,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    SizedBox(height: 12),
+                    
+                    // Datum und Zeit
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.calendar_today_rounded,
+                                size: 12,
+                                color: Colors.blue,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                widget.date,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        SizedBox(width: 8),
+                        
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.access_time_rounded,
+                                size: 12,
+                                color: Colors.orange,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                widget.time,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    SizedBox(height: 12),
+                    
+                    // Footer mit Sitzplätzen und Preis
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.event_seat_rounded,
+                              size: 16,
+                              color: Colors.grey[600],
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              '${widget.seats} ${widget.seats == 1 ? 'Platz' : 'Plätze'}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        Text(
+                          '${widget.price.toStringAsFixed(2)} CHF',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: widget.isPast
+                                ? Colors.grey[600]
+                                : Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    // Countdown für aktive Buchungen
+                    if (!widget.isPast) ...[
+                      SizedBox(height: 12),
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.schedule_rounded,
+                              size: 16,
+                              color: Colors.green,
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Noch 3 Tage bis zur Vorstellung ⏰',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showOptionsMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              
+              Padding(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    _buildMenuOption(
+                      context,
+                      Icons.info_rounded,
+                      'Details anzeigen',
+                      'Vollständige Buchungsdetails',
+                      Colors.blue,
+                      () {
+                        Navigator.pop(context);
+                        _showBookingDetails(context);
+                      },
+                    ),
+                    
+                    if (!widget.isPast) ...[
+                      _buildMenuOption(
+                        context,
+                        Icons.edit_rounded,
+                        'Bearbeiten',
+                        'Buchung ändern',
+                        Colors.orange,
+                        () {
+                          Navigator.pop(context);
+                          _editBooking(context);
+                        },
+                      ),
+                      
+                      _buildMenuOption(
+                        context,
+                        Icons.share_rounded,
+                        'Teilen',
+                        'Buchung mit Freunden teilen',
+                        Colors.green,
+                        () {
+                          Navigator.pop(context);
+                          _shareBooking(context);
+                        },
+                      ),
+                    ],
+                    
+                    _buildMenuOption(
+                      context,
+                      Icons.delete_rounded,
+                      widget.isPast ? 'Aus Historie entfernen' : 'Stornieren',
+                      widget.isPast ? 'Aus Liste entfernen' : 'Buchung stornieren',
+                      Colors.red,
+                      () {
+                        Navigator.pop(context);
+                        _deleteBooking(context);
+                      },
                     ),
                   ],
-                  IconButton(
-                    onPressed: onDelete,
-                    icon: Icon(
-                      Icons.delete_outline,
-                      color: Colors.red[400],
-                    ),
-                    tooltip: 'Buchung löschen',
-                  ),
-                ],
-              ),
-              
-              SizedBox(height: 12),
-              
-              // Cinema and date info
-              Row(
-                children: [
-                  Icon(
-                    Icons.location_on,
-                    size: 16,
-                    color: isPastEvent ? Colors.grey[500] : Colors.red[300],
-                  ),
-                  SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      booking.cinema,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isPastEvent ? Colors.grey[600] : Colors.grey[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              
-              SizedBox(height: 8),
-              
-              Row(
-                children: [
-                  Icon(
-                    Icons.schedule,
-                    size: 16,
-                    color: isPastEvent ? Colors.grey[500] : Colors.red[300],
-                  ),
-                  SizedBox(width: 4),
-                  Text(
-                    _formatDateTime(booking.showtime),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isPastEvent ? Colors.grey[600] : Colors.grey[700],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-              
-              SizedBox(height: 12),
-              
-              // Divider
-              Container(
-                height: 1,
-                color: Colors.grey[200],
-              ),
-              
-              SizedBox(height: 12),
-              
-              // Booking details
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Plätze',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      Text(
-                        '${booking.seats}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isPastEvent ? Colors.grey[600] : Colors.black,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        'Gesamtpreis',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      Text(
-                        'CHF ${booking.totalPrice.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isPastEvent ? Colors.grey[600] : Colors.red[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              
-              // Time until showtime (only for upcoming events)
-              if (!isPastEvent) ...[
-                SizedBox(height: 12),
-                Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.access_time,
-                        size: 16,
-                        color: Colors.blue[600],
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        _getTimeUntilShowtime(booking.showtime),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue[700],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
-              ],
+              ),
             ],
           ),
         ),
@@ -256,155 +422,156 @@ class BookingCard extends StatelessWidget {
     );
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    final weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-    final months = [
-      'Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'
-    ];
-    
-    final weekday = weekdays[dateTime.weekday - 1];
-    final day = dateTime.day;
-    final month = months[dateTime.month - 1];
-    final year = dateTime.year;
-    final hour = dateTime.hour.toString().padLeft(2, '0');
-    final minute = dateTime.minute.toString().padLeft(2, '0');
-    
-    return '$weekday, $day. $month $year um $hour:$minute';
+  Widget _buildMenuOption(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String subtitle,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey[600],
+          ),
+        ),
+        trailing: Icon(
+          Icons.chevron_right_rounded,
+          color: Colors.grey[400],
+        ),
+        onTap: onTap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
   }
 
-  String _getTimeUntilShowtime(DateTime showtime) {
-    final now = DateTime.now();
-    final difference = showtime.difference(now);
-    
-    if (difference.inDays > 0) {
-      return 'In ${difference.inDays} Tag${difference.inDays == 1 ? '' : 'en'}';
-    } else if (difference.inHours > 0) {
-      return 'In ${difference.inHours} Stunde${difference.inHours == 1 ? '' : 'n'}';
-    } else if (difference.inMinutes > 0) {
-      return 'In ${difference.inMinutes} Minute${difference.inMinutes == 1 ? '' : 'n'}';
-    } else {
-      return 'Beginnt jetzt';
-    }
+  void _showBookingDetails(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BookingDetailsScreen(bookingId: widget.bookingId),
+      ),
+    );
   }
 
-  void _showEditDialog(BuildContext context) {
-    final _movieController = TextEditingController(text: booking.movieTitle);
-    final _cinemaController = TextEditingController(text: booking.cinema);
-    final _seatsController = TextEditingController(text: booking.seats.toString());
-    final _priceController = TextEditingController(text: booking.totalPrice.toString());
-    final _formKey = GlobalKey<FormState>();
+  void _editBooking(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SimpleEditBooking(bookingId: widget.bookingId),
+      ),
+    ).then((result) {
+      // Wenn Änderungen gespeichert wurden, aktualisiere die UI
+      if (result == true) {
+        widget.onBookingDeleted?.call(); // Trigger refresh
+      }
+    });
+  }
 
+  void _shareBooking(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Buchung wird geteilt... 📤'),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _deleteBooking(BuildContext context) {
+    // Sichere die Buchung für Undo-Funktion
+    final booking = _bookingManager.getBookingById(widget.bookingId);
+    if (booking == null) return;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.edit, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('Buchung bearbeiten'),
-          ],
-        ),
-        content: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: _movieController,
-                  decoration: InputDecoration(
-                    labelText: 'Film',
-                    prefixIcon: Icon(Icons.movie),
-                  ),
-                  validator: (value) => value?.isEmpty == true ? 'Film eingeben' : null,
-                ),
-                SizedBox(height: 16),
-                TextFormField(
-                  controller: _cinemaController,
-                  decoration: InputDecoration(
-                    labelText: 'Kino',
-                    prefixIcon: Icon(Icons.location_on),
-                  ),
-                  validator: (value) => value?.isEmpty == true ? 'Kino eingeben' : null,
-                ),
-                SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _seatsController,
-                        decoration: InputDecoration(
-                          labelText: 'Plätze',
-                          prefixIcon: Icon(Icons.event_seat),
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value?.isEmpty == true) return 'Anzahl eingeben';
-                          if (int.tryParse(value!) == null) return 'Nur Zahlen';
-                          return null;
-                        },
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _priceController,
-                        decoration: InputDecoration(
-                          labelText: 'Preis (CHF)',
-                          prefixIcon: Icon(Icons.monetization_on),
-                        ),
-                        keyboardType: TextInputType.numberWithOptions(decimal: true),
-                        validator: (value) {
-                          if (value?.isEmpty == true) return 'Preis eingeben';
-                          if (double.tryParse(value!) == null) return 'Ungültiger Preis';
-                          return null;
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+        title: Text(widget.isPast ? 'Aus Historie entfernen?' : 'Buchung stornieren?'),
+        content: Text(
+          widget.isPast 
+              ? 'Diese Buchung wird aus deiner Historie entfernt.'
+              : 'Möchtest du diese Buchung wirklich stornieren?'
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Abbrechen'),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              if (_formKey.currentState!.validate()) {
-                try {
-                  final updatedBooking = booking.copyWith(
-                    movieTitle: _movieController.text.trim(),
-                    cinema: _cinemaController.text.trim(),
-                    seats: int.parse(_seatsController.text),
-                    totalPrice: double.parse(_priceController.text),
-                  );
-                  
-                  await BookingService().updateBooking(booking.id!, updatedBooking);
-                  
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Buchung erfolgreich aktualisiert!'),
-                      backgroundColor: Colors.green,
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              
+              // Buchung wirklich löschen
+              final success = _bookingManager.removeBooking(widget.bookingId);
+              
+              if (success) {
+                // UI aktualisieren
+                widget.onBookingDeleted?.call();
+                
+                // Bestätigung mit Undo-Option anzeigen
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      widget.isPast 
+                          ? '✅ Buchung aus Historie entfernt'
+                          : '✅ Buchung erfolgreich storniert'
                     ),
-                  );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Fehler beim Aktualisieren: $e'),
-                      backgroundColor: Colors.red,
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                    duration: Duration(seconds: 4),
+                    action: SnackBarAction(
+                      label: 'Rückgängig',
+                      textColor: Colors.white,
+                      onPressed: () {
+                        // Buchung wiederherstellen
+                        _bookingManager.restoreBooking(booking);
+                        widget.onBookingDeleted?.call(); // UI aktualisieren
+                        
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Buchung wiederhergestellt'),
+                            backgroundColor: Theme.of(context).primaryColor,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
                     ),
-                  );
-                }
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('❌ Fehler beim Löschen der Buchung'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            child: Text('Speichern', style: TextStyle(color: Colors.white)),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(widget.isPast ? 'Entfernen' : 'Stornieren'),
           ),
         ],
       ),

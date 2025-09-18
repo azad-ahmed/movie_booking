@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:moviebook_app/screens/home/home_screen.dart';
+import 'package:movie_booking/screens/home_screen.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import 'auth/login_screen.dart';
@@ -29,7 +29,7 @@ class Wrapper extends StatelessWidget {
         
         // User is authenticated
         if (snapshot.hasData && snapshot.data != null) {
-          return const HomeScreen();
+          return HomeScreen();
         }
         
         // User is not authenticated

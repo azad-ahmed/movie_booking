@@ -1,19 +1,17 @@
-name: moviebook_app
-description: A Flutter movie booking app with Firebase backend.
-
+name: movie_booking
+description: Eine moderne Flutter-App für die Verwaltung von Kinobuchungen mit Firebase-Backend.
 publish_to: 'none'
 
 version: 1.0.0+1
 
 environment:
-  sdk: '>=2.19.0 <4.0.0'
-  flutter: ">=1.17.0"
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase
+  # Firebase Services
   firebase_core: ^2.24.2
   firebase_auth: ^4.15.3
   cloud_firestore: ^4.13.6
@@ -21,22 +19,21 @@ dependencies:
   # State Management
   provider: ^6.1.1
   
-  # UI
-  cupertino_icons: ^1.0.2
+  # UI & Design
+  cupertino_icons: ^1.0.6
+  
+  # Network & Images
+  http: ^1.1.2
+  cached_network_image: ^3.3.0
+  
+  # Utilities
+  intl: ^0.19.0
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^3.0.1
 
 flutter:
   uses-material-design: true
-
-  # Assets (add here if you want to include images, fonts, etc.)
-  # assets:
-  #   - images/
-  
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
